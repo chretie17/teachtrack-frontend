@@ -1,7 +1,7 @@
-// src/components/Login.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../api';
+import { TextField, Button, Typography, Container, Box, Paper } from '@mui/material';
 
 const Login = () => {
   const [identifier, setIdentifier] = useState('');
@@ -30,23 +30,18 @@ const Login = () => {
       if (response.ok) {
         console.log('Login successful:', data);
 
-        // Store the token in localStorage
+        // Store the token, user ID, and role in localStorage
         localStorage.setItem('token', data.token);
-
-        // Decode the token to get the user role
-        const decodedToken = JSON.parse(atob(data.token.split('.')[1]));
-        const userRole = decodedToken.role;
-
-        // Store the role in localStorage
-        localStorage.setItem('role', userRole);
+        localStorage.setItem('role', data.role);
+        localStorage.setItem('user_id', data.id);
 
         // Redirect based on user role
-        if (userRole === 'admin' || userRole === 'supervisor') {
+        if (data.role === 'admin' || data.role === 'supervisor') {
           navigate('/dashboard');
-        } else if (userRole === 'teacher') {
+        } else if (data.role === 'teacher') {
           navigate('/teachers-classes-schedule');
         } else {
-          console.error('Unknown role:', userRole);
+          console.error('Unknown role:', data.role);
         }
       } else {
         console.error('Login failed:', data.error);
@@ -57,30 +52,52 @@ const Login = () => {
   };
 
   return (
-    <div>
-      <h2>Login</h2>
-      <form onSubmit={handleLogin}>
-        <div>
-          <label>Email or Username:</label>
-          <input
-            type="text"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label>Password:</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit">Login</button>
-      </form>
-    </div>
+    <Container maxWidth="xs">
+      <Paper elevation={3} sx={{ padding: '20px', marginTop: '50px' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Typography component="h1" variant="h5">
+            Login
+          </Typography>
+          <form onSubmit={handleLogin} style={{ width: '100%', marginTop: '20px' }}>
+            <TextField
+              variant="outlined"
+              margin="normal"
+              required
+              fullWidth
+              id="identifier"
+              label="Email or Username"
+              name="identifier"
+              autoComplete="identifier"
+              autoFocus
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+            />
+            <TextField
+              variant="outlined"
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Password"
+              type="password"
+              id="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="primary"
+              sx={{ marginTop: '20px', marginBottom: '20px' }}
+            >
+              Login
+            </Button>
+          </form>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 

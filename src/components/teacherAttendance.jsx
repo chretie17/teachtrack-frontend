@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import apiService from '../api';
-import { Button, Table, TableHead, TableRow, TableCell, TableBody, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Button, Table, TableHead, TableRow, TableCell, TableBody, Select, MenuItem, FormControl, InputLabel, Snackbar } from '@mui/material';
+import { format } from 'date-fns';
 
 const TeacherSchedule = () => {
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
   const [status, setStatus] = useState('Present');
+  const [geolocation, setGeolocation] = useState({ latitude: null, longitude: null });
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   useEffect(() => {
     fetchClasses();
+    getGeolocation(); // Capture geolocation on component mount
   }, []);
 
   const fetchClasses = async () => {
     try {
-      const teacherId = localStorage.getItem('user_id'); // Assuming teacher's ID is stored in localStorage
+      const teacherId = localStorage.getItem('user_id');
       const response = await fetch(`${apiService.getBaseURL()}/api/attendance/teacher/${teacherId}`);
       const data = await response.json();
       setClasses(data);
@@ -22,11 +27,58 @@ const TeacherSchedule = () => {
     }
   };
 
+  const getGeolocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setGeolocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error('Error getting geolocation:', error);
+          setSnackbarMessage('You need to allow location access to mark attendance.');
+          setSnackbarOpen(true);
+        }
+      );
+    } else {
+      console.error('Geolocation is not supported by this browser.');
+      setSnackbarMessage('Geolocation is not supported by this browser.');
+      setSnackbarOpen(true);
+    }
+  };
+
   const handleMarkAttendance = async () => {
+    // Check if geolocation is available
+    if (!geolocation.latitude || !geolocation.longitude) {
+      setSnackbarMessage('Location not available. Attendance cannot be recorded without location data.');
+      setSnackbarOpen(true);
+      return;
+    }
+
     try {
-      const teacherId = localStorage.getItem('user_id'); // Assuming teacher's ID is stored in localStorage
+      const selectedClassDetails = classes.find((classItem) => classItem.id === selectedClass);
+      
+      if (!selectedClassDetails) {
+        setSnackbarMessage('Please select a valid class.');
+        setSnackbarOpen(true);
+        return;
+      }
+
+      const currentTime = format(new Date(), 'HH:mm'); // Get current time in HH:mm format
+      const dayOfWeek = format(new Date(), 'EEEE'); // Get the current day of the week
+
+      if (dayOfWeek !== selectedClassDetails.day_of_week || currentTime < selectedClassDetails.start_time || currentTime > selectedClassDetails.end_time) {
+        setSnackbarMessage(`You can only mark attendance during your class time: ${selectedClassDetails.start_time} - ${selectedClassDetails.end_time} on ${selectedClassDetails.day_of_week}`);
+        setSnackbarOpen(true);
+        return;
+      }
+
+      const teacherId = localStorage.getItem('user_id');
       const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
-      await fetch(`${apiService.getBaseURL()}/api/attendance/mark`, {
+
+      const response = await fetch(`${apiService.getBaseURL()}/api/attendance/mark`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -34,12 +86,29 @@ const TeacherSchedule = () => {
           teacher_id: teacherId,
           attendance_date: today,
           status: status,
+          latitude: geolocation.latitude,
+          longitude: geolocation.longitude,
         }),
       });
-      alert('Attendance marked successfully! Awaiting supervisor approval.');
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSnackbarMessage('Attendance marked successfully! Awaiting supervisor approval.');
+      } else {
+        setSnackbarMessage(data.error || 'Failed to mark attendance. Please try again later.');
+      }
+      
+      setSnackbarOpen(true);
     } catch (error) {
       console.error('Error marking attendance:', error);
+      setSnackbarMessage('Failed to mark attendance. Please try again later.');
+      setSnackbarOpen(true);
     }
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
   };
 
   return (
@@ -95,6 +164,14 @@ const TeacherSchedule = () => {
       <Button variant="contained" color="primary" onClick={handleMarkAttendance}>
         Mark Attendance
       </Button>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={snackbarMessage}
+      />
     </div>
   );
 };

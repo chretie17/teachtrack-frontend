@@ -17,18 +17,18 @@ const Sidebar = ({ role }) => {
       { text: 'Dashboard', path: '/dashboard' },
       { text: 'Users', path: '/users' },
       { text: 'Classes Schedule', path: '/classes-schedule' },
-      { text: 'Attendances', path: '/attendances' },
+      { text: 'Attendances', path: '/approve-attendance' },
       { text: 'All Teachers', path: '/all-teachers' },
       { text: 'Reports', path: '/reports' },
     ],
     supervisor: [
-      { text: 'All Teachers', path: '/all-teachers' },
-      { text: 'Attendances', path: '/attendances' },
+      { text: 'All Lectures', path: '/manage-teachers' },
+      { text: 'Attendances', path: '/approve-attendance' },
       { text: 'Classes Schedule', path: '/classes-schedule' },
     ],
     teacher: [
       { text: 'Classes Schedule', path: '/teachers-classes-schedule' },
-      { text: 'Attendance', path: '/attendance' },
+      { text: 'Attendance History', path: '/attendance-history' },
     ],
   };
 

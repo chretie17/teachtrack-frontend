@@ -8,6 +8,9 @@ import Classes from './components/classes';
 import PrivateRoute from './route/ProtectedRoute'; // Import the PrivateRoute component
 import TeacherSchedule from './components/teacherAttendance';
 import SupervisorApproval from './components/SupervisorAttendance';
+import AttendanceHistory from './components/Attendancehistory';
+import ManageTeachers from './supervisor/teachers';
+import ApproveAttendance from './supervisor/Attendance';
 import { CssBaseline } from '@mui/material';
 
 function Layout() {
@@ -42,6 +45,9 @@ function App() {
           <Route path="/classes-schedule" element={<Classes />} />
           <Route path="/teachers-classes-schedule" element={<TeacherSchedule />} />
           <Route path="/supervisor-approval" element={<SupervisorApproval />} />
+          <Route path="/attendance-history" element={<AttendanceHistory />} />
+          <Route path="/manage-teachers" element={<ManageTeachers />} />
+          <Route path="/approve-attendance" element={<ApproveAttendance />} />
           <Route path="/attendances" element={<div>Attendances</div>} /> {/* Placeholder */}
           <Route path="/all-teachers" element={<div>All Teachers</div>} /> {/* Placeholder */}
           <Route path="/reports" element={<div>Reports Page</div>} /> {/* Placeholder */}
