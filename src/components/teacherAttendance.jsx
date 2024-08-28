@@ -3,6 +3,10 @@ import apiService from '../api';
 import { Button, Table, TableHead, TableRow, TableCell, TableBody, Select, MenuItem, FormControl, InputLabel, Snackbar } from '@mui/material';
 import { format } from 'date-fns';
 
+const AUCA_LATITUDE = 1.9706; 
+const AUCA_LONGITUDE = 30.1044; 
+const AUCA_RADIUS = 0.15; 
+
 const TeacherSchedule = () => {
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
@@ -49,10 +53,23 @@ const TeacherSchedule = () => {
     }
   };
 
+  const isWithinAucaCampus = (latitude, longitude) => {
+    const distance = Math.sqrt(
+      Math.pow(latitude - AUCA_LATITUDE, 2) + Math.pow(longitude - AUCA_LONGITUDE, 2)
+    );
+    return distance <= AUCA_RADIUS;
+  };
+
   const handleMarkAttendance = async () => {
-    // Check if geolocation is available
+    // Check if geolocation is available and within AUCA campus
     if (!geolocation.latitude || !geolocation.longitude) {
       setSnackbarMessage('Location not available. Attendance cannot be recorded without location data.');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    if (!isWithinAucaCampus(geolocation.latitude, geolocation.longitude)) {
+      setSnackbarMessage('You must be on the AUCA Gishushu campus to mark attendance.');
       setSnackbarOpen(true);
       return;
     }
