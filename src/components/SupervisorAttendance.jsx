@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import apiService from '../api';
+import apiService from '../Api';
 import { Button, Table, TableHead, TableRow, TableCell, TableBody } from '@mui/material';
 
 const SupervisorApproval = () => {
