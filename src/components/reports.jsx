@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Grid, Typography, Button, TextField, Paper, Box } from '@mui/material';
+import { Container, Grid, Typography, Button, TextField, Paper, Box, CircularProgress } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -19,18 +19,28 @@ const themeColors = {
 
 // Styled components
 const StyledPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
+  padding: theme.spacing(4),
   borderRadius: theme.spacing(2),
-  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-  backgroundColor: themeColors.secondary,
+  boxShadow: '0 8px 32px rgba(0, 68, 123, 0.1)',
+  backgroundColor: '#ffffff',
+  marginBottom: theme.spacing(4),
+  transition: 'box-shadow 0.3s ease-in-out',
+  '&:hover': {
+    boxShadow: '0 12px 48px rgba(0, 68, 123, 0.2)',
+  },
 }));
 
 const StyledButton = styled(Button)(({ theme }) => ({
   margin: theme.spacing(1),
-  padding: theme.spacing(1, 3),
+  padding: theme.spacing(1.5, 4),
   borderRadius: theme.spacing(5),
   fontWeight: 'bold',
   textTransform: 'none',
+  transition: 'all 0.3s ease-in-out',
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 4px 12px rgba(0, 68, 123, 0.2)',
+  },
 }));
 
 const StyledTable = styled('table')(({ theme }) => ({
@@ -40,17 +50,20 @@ const StyledTable = styled('table')(({ theme }) => ({
   '& th, & td': {
     padding: theme.spacing(2),
     borderBottom: `1px solid ${theme.palette.divider}`,
+    textAlign: 'left',
   },
   '& th': {
     backgroundColor: themeColors.primary,
     color: 'white',
     fontWeight: 'bold',
+    textTransform: 'uppercase',
   },
   '& tr:nth-of-type(even)': {
     backgroundColor: 'rgba(0, 68, 123, 0.05)',
   },
   '& tr:hover': {
     backgroundColor: 'rgba(0, 68, 123, 0.1)',
+    transition: 'background-color 0.3s ease-in-out',
   },
 }));
 
@@ -61,19 +74,15 @@ const ReportPage = () => {
   const [customReportData, setCustomReportData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch overall report data and teacher performance data on component mount
   useEffect(() => {
     fetchOverallReportData();
     fetchTeacherPerformanceData();
   }, []);
 
   const fetchOverallReportData = async () => {
-    console.log('Fetching overall report data...');
-
     try {
       setLoading(true);
       const response = await axios.get(`${apiService.getBaseURL()}/api/reports/attendance-summary`);
-      console.log('Fetched overall data:', response.data);
       setReportData(response.data);
     } catch (error) {
       console.error('Error fetching overall report data:', error);
@@ -83,11 +92,8 @@ const ReportPage = () => {
   };
 
   const fetchTeacherPerformanceData = async () => {
-    console.log('Fetching teacher performance data...');
-
     try {
       const response = await axios.get(`${apiService.getBaseURL()}/api/reports/teacher-performance`);
-      console.log('Fetched teacher performance data:', response.data);
       setTeacherPerformanceData(response.data);
     } catch (error) {
       console.error('Error fetching teacher performance data:', error);
@@ -95,123 +101,63 @@ const ReportPage = () => {
   };
 
   const fetchCustomReportData = async () => {
-    if (!dateRange[0] || !dateRange[1]) {
-      console.warn('Date range is not fully selected:', dateRange);
-      return;
-    }
-
-    console.log('Fetching custom report data...');
-
-    try {
-      const response = await axios.post(`${apiService.getBaseURL()}/api/reports/custom`, {
-        reportType: 'attendance', // Replace with the appropriate report type
-        startDate: dateRange[0]?.format('YYYY-MM-DD'),
-        endDate: dateRange[1]?.format('YYYY-MM-DD'),
-      });
-      console.log('Fetched custom report data:', response.data);
-      setCustomReportData(response.data);
-    } catch (error) {
-      console.error('Error fetching custom report data:', error);
-    }
-  };
-
-  const fetchReportDataByDate = async () => {
-    if (!dateRange[0] || !dateRange[1]) {
-      console.warn('Date range is not fully selected:', dateRange);
-      return;
-    }
-
-    console.log('Fetching report data with date range:', dateRange);
+    if (!dateRange[0] || !dateRange[1]) return;
 
     try {
       setLoading(true);
-      const response = await axios.get(`${apiService.getBaseURL()}/api/reports/attendance-summary`, {
-        params: {
-          startDate: dateRange[0]?.format('YYYY-MM-DD'),
-          endDate: dateRange[1]?.format('YYYY-MM-DD'),
-        },
+      const response = await axios.post(`${apiService.getBaseURL()}/api/reports/custom`, {
+        reportType: 'teacherPerformance',
+        startDate: dateRange[0]?.format('YYYY-MM-DD'),
+        endDate: dateRange[1]?.format('YYYY-MM-DD'),
       });
-
-      console.log('Fetched data for date range:', response.data); 
-      setReportData(response.data);
+      setCustomReportData(response.data);
     } catch (error) {
-      console.error('Error fetching report data for date range:', error);
+      console.error('Error fetching custom report data:', error);
     } finally {
       setLoading(false);
     }
-
-    // Fetch custom report data for the selected date range
-    fetchCustomReportData();
   };
 
-  const generatePDF = () => {
-    console.log('Generating PDF...');
+  const generatePDF = (title, data, columns) => {
     const doc = new jsPDF();
-
-    // Add logo as watermark
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    doc.addImage(logo, 'PNG', pageWidth / 2 - 40, pageHeight / 2 - 40, 80, 80, '', 'NONE', 45);
+
+    // Add logo
+    doc.addImage(logo, 'PNG', 10, 10, 40, 40);
 
     // Add title
     doc.setFontSize(24);
     doc.setTextColor(themeColors.primary);
-    doc.text('AUCA Report', pageWidth / 2, 20, { align: 'center' });
+    doc.text(title, pageWidth / 2, 40, { align: 'center' });
 
+    // Add date
     doc.setFontSize(12);
-    doc.setTextColor('#333333');
+    doc.setTextColor('#666666');
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth - 15, 20, { align: 'right' });
 
-    // Attendance Summary Table
+    // Add table
     autoTable(doc, {
-      startY: 40,
-      head: [['Date', 'Approved', 'Unapproved']],
-      body: reportData.map(row => [row.date, row.approved, row.unapproved]),
-      theme: 'striped',
-      headStyles: { fillColor: themeColors.primary, textColor: 'white', fontStyle: 'bold' },
-      bodyStyles: { textColor: '#333333' },
-      alternateRowStyles: { fillColor: '#f8f8f8' },
-      margin: { top: 10 },
-    });
-
-    // Check if there's space left on the page for the next table
-    let finalY = doc.lastAutoTable.finalY;
-    if (finalY > 250) { 
-      doc.addPage();
-      finalY = 20; 
-    }
-
-    // Teacher Performance Table
-    autoTable(doc, {
-      startY: finalY + 10, 
-      head: [['Teacher Name', 'Total Classes', 'Total Attendance', 'Approved Attendance']],
-      body: teacherPerformanceData.map(row => [
-        row.teacher_name, 
-        row.total_classes, 
-        row.total_attendance, 
-        row.approved_attendance
-      ]),
+      startY: 60,
+      head: [columns],
+      body: data.map(row => columns.map(col => row[col.toLowerCase().replace(/ /g, '_')])),
       theme: 'grid',
-      headStyles: { fillColor: themeColors.primary, textColor: 'white', fontStyle: 'bold' },
-      margin: { top: 10 },
+      headStyles: {
+        fillColor: themeColors.primary,
+        textColor: 'white',
+        fontStyle: 'bold',
+        halign: 'center',
+      },
+      bodyStyles: {
+        textColor: '#333333',
+      },
+      alternateRowStyles: {
+        fillColor: '#f8f8f8',
+      },
+      margin: { top: 60 },
     });
 
-    // Add another page if needed
-    finalY = doc.lastAutoTable.finalY;
-    if (finalY > 250) {
-      doc.addPage();
-      finalY = 20;
-    }
-
-    // Custom Report Table (Full report without date range)
-    autoTable(doc, {
-      startY: finalY + 10,
-      head: [['Date', 'Approved', 'Unapproved']],
-      body: customReportData.map(row => [row.date, row.approved, row.unapproved]),
-      theme: 'grid',
-      headStyles: { fillColor: themeColors.primary, textColor: 'white', fontStyle: 'bold' },
-    });
-
-    // Add footer for page numbers
+    // Add footer
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -220,14 +166,126 @@ const ReportPage = () => {
       doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
     }
 
-    // Save PDF
-    doc.save('comprehensive-report.pdf');
+    // Add watermark
+    doc.setGState(new doc.GState({ opacity: 0.2 }));
+    doc.setFontSize(60);
+    doc.setTextColor(themeColors.primary);
+    doc.text('AUCA REPORT', pageWidth / 2, pageHeight / 2, {
+      align: 'center',
+      angle: 45,
+    });
+
+    doc.save(`${title.toLowerCase().replace(/ /g, '-')}.pdf`);
   };
 
-   return (
+  const generateOverallReportPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Add logo
+    doc.addImage(logo, 'PNG', 10, 10, 40, 40);
+
+    // Add title
+    doc.setFontSize(24);
+    doc.setTextColor(themeColors.primary);
+    doc.text('AUCA Overall Report', pageWidth / 2, 40, { align: 'center' });
+
+    // Add date
+    doc.setFontSize(12);
+    doc.setTextColor('#666666');
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth - 15, 20, { align: 'right' });
+
+    let yOffset = 60;
+
+    // Attendance Summary Table
+    doc.setFontSize(16);
+    doc.setTextColor(themeColors.primary);
+    doc.text('Attendance Summary', 14, yOffset);
+    yOffset += 10;
+
+    autoTable(doc, {
+      startY: yOffset,
+      head: [['Date', 'Approved', 'Unapproved']],
+      body: reportData.map(row => [row.date, row.approved, row.unapproved]),
+      theme: 'grid',
+      headStyles: {
+        fillColor: themeColors.primary,
+        textColor: 'white',
+        fontStyle: 'bold',
+        halign: 'center',
+      },
+      bodyStyles: {
+        textColor: '#333333',
+      },
+      alternateRowStyles: {
+        fillColor: '#f8f8f8',
+      },
+      margin: { top: yOffset },
+    });
+
+    yOffset = doc.lastAutoTable.finalY + 20;
+
+    // Teacher Performance Table
+    doc.setFontSize(16);
+    doc.setTextColor(themeColors.primary);
+    doc.text('Teacher Performance', 14, yOffset);
+    yOffset += 10;
+
+    autoTable(doc, {
+      startY: yOffset,
+      head: [['Teacher Name', 'Lesson Name', 'Class Date', 'Attendance Status', 'Recommendation']],
+      body: teacherPerformanceData.map(row => [
+        row.teacher_name,
+        row.lesson_name,
+        row.class_date,
+        row.attendance_status,
+        row.recommendation
+      ]),
+      theme: 'grid',
+      headStyles: {
+        fillColor: themeColors.primary,
+        textColor: 'white',
+        fontStyle: 'bold',
+        halign: 'center',
+      },
+      bodyStyles: {
+        textColor: '#333333',
+      },
+      alternateRowStyles: {
+        fillColor: '#f8f8f8',
+      },
+      margin: { top: yOffset },
+    });
+
+    // Add footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor('#666666');
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    }
+
+    // Add watermark
+    doc.setGState(new doc.GState({ opacity: 0.2 }));
+    doc.setFontSize(60);
+    doc.setTextColor(themeColors.primary);
+    doc.text('AUCA REPORT', pageWidth / 2, pageHeight / 2, {
+      align: 'center',
+      angle: 45,
+    });
+
+    doc.save('auca-overall-report.pdf');
+  };
+
+  const generateCustomReportPDF = () => {
+    generatePDF('AUCA Custom Report', customReportData, ['Teacher Name', 'Lesson Name', 'Class Date', 'Attendance Status', 'Insights']);
+  };
+  return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" sx={{ mb: 4, color: themeColors.primary, fontWeight: 'bold' }}>
-        Report Generation
+      <Typography variant="h3" sx={{ mb: 4, color: themeColors.primary, fontWeight: 'bold', textAlign: 'center' }}>
+        AUCA Report Generation
       </Typography>
       <StyledPaper elevation={3}>
         <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -250,29 +308,38 @@ const ReportPage = () => {
             <Grid item xs={12} md={6}>
               <StyledButton
                 variant="contained"
-                color="primary"
-                onClick={fetchReportDataByDate}
+                sx={{ backgroundColor: themeColors.primary }}
+                onClick={fetchCustomReportData}
                 disabled={loading || !dateRange[0] || !dateRange[1]}
               >
-                Fetch Report Data
+                {loading ? <CircularProgress size={24} /> : 'Fetch Custom Report Data'}
               </StyledButton>
               <StyledButton
                 variant="outlined"
-                color="secondary"
-                onClick={generatePDF}
-                disabled={reportData.length === 0 && teacherPerformanceData.length === 0 && customReportData.length === 0}
+                sx={{ color: themeColors.primary, borderColor: themeColors.primary }}
+                onClick={generateCustomReportPDF}
+                disabled={customReportData.length === 0}
               >
-                Download PDF
+                Download Custom Report
+              </StyledButton>
+              <StyledButton
+                variant="contained"
+                sx={{ backgroundColor: themeColors.primary }}
+                onClick={generateOverallReportPDF}
+                disabled={reportData.length === 0 && teacherPerformanceData.length === 0}
+              >
+                Download Overall Report
               </StyledButton>
             </Grid>
           </Grid>
         </LocalizationProvider>
       </StyledPaper>
-
+  
+      {/* Display Data Tables */}
       <Box sx={{ mt: 4 }}>
         {Array.isArray(reportData) && reportData.length > 0 && (
-          <StyledPaper elevation={3} sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ mb: 2, color: themeColors.primary, fontWeight: 'bold' }}>
+          <StyledPaper elevation={3}>
+            <Typography variant="h5" sx={{ mb: 3, color: themeColors.primary, fontWeight: 'bold' }}>
               Attendance Summary
             </Typography>
             <StyledTable>
@@ -295,73 +362,79 @@ const ReportPage = () => {
             </StyledTable>
           </StyledPaper>
         )}
-
+  
         {Array.isArray(teacherPerformanceData) && teacherPerformanceData.length > 0 && (
-          <StyledPaper elevation={3} sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ mb: 2, color: themeColors.primary, fontWeight: 'bold' }}>
+          <StyledPaper elevation={3}>
+            <Typography variant="h5" sx={{ mb: 3, color: themeColors.primary, fontWeight: 'bold' }}>
               Teacher Performance
             </Typography>
             <StyledTable>
               <thead>
                 <tr>
                   <th>Teacher Name</th>
-                  <th>Total Classes</th>
-                  <th>Total Attendance</th>
-                  <th>Approved Attendance</th>
+                  <th>Lesson Name</th>
+                  <th>Class Date</th>
+                  <th>Attendance Status</th>
+                  <th>Recommendation</th>
                 </tr>
               </thead>
               <tbody>
                 {teacherPerformanceData.map((row, index) => (
                   <tr key={index}>
                     <td>{row.teacher_name}</td>
-                    <td>{row.total_classes}</td>
-                    <td>{row.total_attendance}</td>
-                    <td>{row.approved_attendance}</td>
+                    <td>{row.lesson_name}</td>
+                    <td>{row.class_date}</td>
+                    <td>{row.attendance_status}</td>
+                    <td>{row.recommendation}</td>
                   </tr>
                 ))}
               </tbody>
             </StyledTable>
           </StyledPaper>
         )}
-
+  
         {Array.isArray(customReportData) && customReportData.length > 0 && (
-          <StyledPaper elevation={3} sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ mb: 2, color: themeColors.primary, fontWeight: 'bold' }}>
+          <StyledPaper elevation={3}>
+            <Typography variant="h5" sx={{ mb: 3, color: themeColors.primary, fontWeight: 'bold' }}>
               Custom Report
             </Typography>
             <StyledTable>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Approved</th>
-                  <th>Unapproved</th>
+                  <th>Teacher Name</th>
+                  <th>Lesson Name</th>
+                  <th>Class Date</th>
+                  <th>Attendance Status</th>
+                  <th>Insights</th>
                 </tr>
               </thead>
               <tbody>
                 {customReportData.map((row, index) => (
                   <tr key={index}>
-                    <td>{row.date}</td>
-                    <td>{row.approved}</td>
-                    <td>{row.unapproved}</td>
+                    <td>{row.teacher_name}</td>
+                    <td>{row.lesson_name}</td>
+                    <td>{row.class_date}</td>
+                    <td>{row.attendance_status}</td>
+                    <td>{row.insights}</td>
                   </tr>
                 ))}
               </tbody>
             </StyledTable>
           </StyledPaper>
         )}
-
-        {!Array.isArray(reportData) && reportData.length === 0 && 
-         !Array.isArray(teacherPerformanceData) && teacherPerformanceData.length === 0 && 
+  
+        {!Array.isArray(reportData) && reportData.length === 0 &&
+         !Array.isArray(teacherPerformanceData) && teacherPerformanceData.length === 0 &&
          !Array.isArray(customReportData) && customReportData.length === 0 && (
           <StyledPaper elevation={3}>
-            <Typography variant="body1" sx={{ color: themeColors.primary }}>
-              No data available for the selected date range.
+            <Typography variant="body1" sx={{ color: themeColors.primary, textAlign: 'center' }}>
+              No data available for the selected date range. Please adjust your selection and try again.
             </Typography>
           </StyledPaper>
         )}
       </Box>
     </Container>
   );
-};
+}
 
 export default ReportPage;

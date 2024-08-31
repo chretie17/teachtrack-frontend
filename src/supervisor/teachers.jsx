@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Table, Button, Modal, Form, Input, message, Popconfirm } from 'antd';
+import { EditOutlined, DeleteOutlined, UserAddOutlined } from '@ant-design/icons';
 
 const apiService = {
   getBaseURL: () => 'http://localhost:5000', // Replace with your actual base URL
@@ -6,45 +8,55 @@ const apiService = {
 
 const ManageTeachers = () => {
   const [teachers, setTeachers] = useState([]);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ id: null, username: '', email: '' });
+  const [modalVisible, setModalVisible] = useState(false);
+  const [form] = Form.useForm();
+  const [editingTeacher, setEditingTeacher] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchTeachers();
   }, []);
 
   const fetchTeachers = async () => {
+    setLoading(true);
     try {
       const response = await fetch(`${apiService.getBaseURL()}/api/supervisor/teachers`);
       const data = await response.json();
       setTeachers(data);
     } catch (error) {
-      console.error('Error fetching teachers:', error);
+      message.error('Error fetching teachers');
     }
+    setLoading(false);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (values) => {
     try {
-      if (form.id) {
-        await fetch(`${apiService.getBaseURL()}/api/supervisor/teachers/${form.id}`, {
+      if (editingTeacher) {
+        await fetch(`${apiService.getBaseURL()}/api/supervisor/teachers/${editingTeacher.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
+          body: JSON.stringify(values),
         });
+        message.success('Teacher updated successfully');
       } else {
-        // Create teacher logic here
+        await fetch(`${apiService.getBaseURL()}/api/supervisor/teachers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(values),
+        });
+        message.success('Teacher added successfully');
       }
-      setOpen(false);
+      setModalVisible(false);
       fetchTeachers();
     } catch (error) {
-      console.error('Error saving teacher:', error);
+      message.error('Error saving teacher');
     }
   };
 
   const handleEdit = (teacher) => {
-    setForm(teacher);
-    setOpen(true);
+    setEditingTeacher(teacher);
+    form.setFieldsValue(teacher);
+    setModalVisible(true);
   };
 
   const handleDelete = async (id) => {
@@ -52,203 +64,162 @@ const ManageTeachers = () => {
       await fetch(`${apiService.getBaseURL()}/api/supervisor/teachers/${id}`, {
         method: 'DELETE',
       });
+      message.success('Teacher deleted successfully');
       fetchTeachers();
     } catch (error) {
-      console.error('Error deleting teacher:', error);
+      message.error('Error deleting teacher');
     }
   };
 
-  const handleClose = () => {
-    setForm({ id: null, username: '', email: '' });
-    setOpen(false);
-  };
+  const columns = [
+    {
+      title: 'Username',
+      dataIndex: 'username',
+      key: 'username',
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_, record) => (
+        <span>
+          <Button
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+            type="link"
+          >
+            Edit
+          </Button>
+          <Popconfirm
+            title="Are you sure you want to delete this teacher?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button icon={<DeleteOutlined />} type="link" danger>
+              Delete
+            </Button>
+          </Popconfirm>
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="manage-teachers">
       <div className="container">
         <div className="header">
           <h1>Manage Teachers</h1>
+          <Button
+            type="primary"
+            icon={<UserAddOutlined />}
+            onClick={() => {
+              setEditingTeacher(null);
+              form.resetFields();
+              setModalVisible(true);
+            }}
+          >
+            Add Teacher
+          </Button>
         </div>
-        <div className="content">
-          <table>
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teachers.map((teacher) => (
-                <tr key={teacher.id}>
-                  <td>{teacher.username}</td>
-                  <td>{teacher.email}</td>
-                  <td>
-                    <button className="btn btn-edit" onClick={() => handleEdit(teacher)}>
-                      Edit
-                    </button>
-                    <button className="btn btn-delete" onClick={() => handleDelete(teacher.id)}>
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table
+          columns={columns}
+          dataSource={teachers}
+          rowKey="id"
+          loading={loading}
+        />
       </div>
 
-      {open && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h2>{form.id ? 'Edit Teacher' : 'Add Teacher'}</h2>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label htmlFor="username">Username</label>
-                <input
-                  type="text"
-                  id="username"
-                  value={form.username}
-                  onChange={(e) => setForm({ ...form, username: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="email">Email</label>
-                <input
-                  type="email"
-                  id="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-actions">
-                <button type="button" className="btn btn-secondary" onClick={handleClose}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Save
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Modal
+        title={editingTeacher ? 'Edit Teacher' : 'Add Teacher'}
+        visible={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        footer={null}
+      >
+        <Form form={form} onFinish={handleSubmit} layout="vertical">
+          <Form.Item
+            name="username"
+            label="Username"
+            rules={[{ required: true, message: 'Please input the username!' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="email"
+            label="Email"
+            rules={[
+              { required: true, message: 'Please input the email!' },
+              { type: 'email', message: 'Please enter a valid email!' },
+            ]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              {editingTeacher ? 'Update' : 'Add'}
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
 
-      <style jsx>{`
+      <style jsx global>{`
         .manage-teachers {
-          font-family: Arial, sans-serif;
-          background-color: #f0f0f0;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background-color: #f0f4f8;
           min-height: 100vh;
           padding: 2rem;
         }
         .container {
-          max-width: 800px;
+          max-width: 1000px;
           margin: 0 auto;
           background-color: white;
           border-radius: 8px;
           overflow: hidden;
-          box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
         }
         .header {
           background-color: #00447b;
           color: white;
           padding: 1.5rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
         }
         h1 {
           margin: 0;
-          font-size: 1.5rem;
+          font-size: 1.8rem;
+          font-weight: 500;
         }
-        .content {
+        .ant-table-wrapper {
           padding: 1.5rem;
         }
-        table {
-          width: 100%;
-          border-collapse: collapse;
+        .ant-table-thead > tr > th {
+          background-color: #f0f4f8;
         }
-        th, td {
-          text-align: left;
-          padding: 0.75rem;
-          border-bottom: 1px solid #e0e0e0;
-        }
-        th {
-          background-color: #f5f5f5;
-          font-weight: bold;
-        }
-        .btn {
-          padding: 0.5rem 1rem;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 0.875rem;
-          transition: background-color 0.3s;
-        }
-        .btn-edit {
-          background-color: #4caf50;
-          color: white;
-          margin-right: 0.5rem;
-        }
-        .btn-delete {
-          background-color: #f44336;
-          color: white;
-        }
-        .btn-edit:hover {
-          background-color: #45a049;
-        }
-        .btn-delete:hover {
-          background-color: #d32f2f;
-        }
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: rgba(0, 0, 0, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        .modal {
-          background-color: white;
-          padding: 2rem;
-          border-radius: 8px;
-          width: 100%;
-          max-width: 400px;
-        }
-        .form-group {
-          margin-bottom: 1rem;
-        }
-        label {
-          display: block;
-          margin-bottom: 0.5rem;
-        }
-        input {
-          width: 100%;
-          padding: 0.5rem;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-        }
-        .form-actions {
-          display: flex;
-          justify-content: flex-end;
-          margin-top: 1rem;
-        }
-        .btn-secondary {
-          background-color: #f0f0f0;
-          color: #333;
-          margin-right: 0.5rem;
-        }
-        .btn-primary {
+        .ant-btn-primary {
           background-color: #00447b;
+          border-color: #00447b;
+        }
+        .ant-btn-primary:hover {
+          background-color: #40a9ff;
+          border-color: #40a9ff;
+        }
+        .ant-modal-header {
+          background-color: #1890ff;
+          border-bottom: none;
+        }
+        .ant-modal-title {
           color: white;
         }
-        .btn-secondary:hover {
-          background-color: #e0e0e0;
+        .ant-modal-close-x {
+          color: white;
         }
-        .btn-primary:hover {
-          background-color: #003366;
+        .ant-form-item-label > label {
+          font-weight: 500;
         }
       `}</style>
     </div>

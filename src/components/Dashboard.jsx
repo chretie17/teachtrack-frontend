@@ -25,7 +25,7 @@ import {
   TableRow,
   Paper,
 } from '@mui/material';
-import apiService from '../api'; // Import your configured axios instance
+import apiService from '../Api'; // Import your configured axios instance
 
 const AdminDashboard = () => {
   const [dashboardData, setDashboardData] = useState({
@@ -141,6 +141,12 @@ const AdminDashboard = () => {
 };
 
 function AttendanceTrends({ data }) {
+  // Convert the date format to a human-readable one or as needed by Recharts
+  const formattedData = data.map((item) => ({
+    ...item,
+    date: new Date(item.date).toLocaleDateString('en-GB'), // Formats to 'DD/MM/YYYY'
+  }));
+
   return (
     <InventoryWrapper>
       <InventoryItem>
@@ -151,12 +157,11 @@ function AttendanceTrends({ data }) {
           <CardContent>
             <ChartContainer>
               <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={data}>
+                <LineChart data={formattedData}>
                   <XAxis dataKey="date" />
                   <YAxis />
                   <Tooltip />
-                  <Line type="monotone" dataKey="approved" stroke="#00447b" />
-                  <Line type="monotone" dataKey="unapproved" stroke="#82ca9d" />
+                  <Line type="monotone" dataKey="count" stroke="#00447b" />
                 </LineChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -166,6 +171,7 @@ function AttendanceTrends({ data }) {
     </InventoryWrapper>
   );
 }
+
 
 function AttendanceByClass({ data }) {
   return (

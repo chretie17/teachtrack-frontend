@@ -109,6 +109,7 @@ const Sidebar = ({ role, userName }) => {
       { text: 'Reports', path: '/reports', icon: <Assessment /> },
     ],
     supervisor: [
+      { text: 'Dashboard', path: '/dashboard', icon: <Dashboard /> },
       { text: 'All Lectures', path: '/manage-teachers', icon: <School /> },
       { text: 'Attendances', path: '/approve-attendance', icon: <AssignmentIcon /> },
       { text: 'Classes Schedule', path: '/classes-schedule', icon: <Schedule /> },
