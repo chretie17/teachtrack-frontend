@@ -1,21 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import apiService from '../Api'; // Import the ApiService class
-
-const AUCA_LATITUDE = -1.9559213026121696;
-const AUCA_LONGITUDE = 30.10413054430662;
-const AUCA_RADIUS = 50;
+import apiService from '../Api';
+import styled from 'styled-components';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faQrcode, faChalkboardTeacher } from '@fortawesome/free-solid-svg-icons';
 
 const TeacherSchedule = () => {
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
-  const [status, setStatus] = useState('Present');
-  const [geolocation, setGeolocation] = useState({ latitude: null, longitude: null });
+  const [qrImage, setQrImage] = useState(null);
   const [alert, setAlert] = useState({ show: false, message: '', type: 'info' });
 
   useEffect(() => {
     fetchClasses();
-    getGeolocation();
   }, []);
 
   const fetchClasses = async () => {
@@ -30,97 +26,35 @@ const TeacherSchedule = () => {
     }
   };
 
-  const getGeolocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setGeolocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-        },
-        (error) => {
-          console.error('Error getting geolocation:', error);
-          showAlert('You need to allow location access to mark attendance.', 'warning');
-        }
-      );
-    } else {
-      showAlert('Geolocation is not supported by this browser.', 'error');
-    }
-  };
-
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const toRadians = (degrees) => degrees * (Math.PI / 180);
-    const R = 6371;
-    const dLat = toRadians(lat2 - lat1);
-    const dLon = toRadians(lon2 - lon1);
-    const a = 
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * 
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-
-  const isWithinAucaCampus = (latitude, longitude) => {
-    const distance = calculateDistance(latitude, longitude, AUCA_LATITUDE, AUCA_LONGITUDE);
-    return distance <= AUCA_RADIUS;
-  };
-
-  const handleMarkAttendance = async () => {
-    if (!geolocation.latitude || !geolocation.longitude) {
-      showAlert('Location not available. Attendance cannot be recorded without location data.', 'error');
-      return;
-    }
-
-    if (!isWithinAucaCampus(geolocation.latitude, geolocation.longitude)) {
-      showAlert('You must be on the AUCA Gishushu campus to mark attendance.', 'warning');
+  const handleGenerateQRCode = async () => {
+    const teacherId = localStorage.getItem('user_id');
+    if (!selectedClass) {
+      showAlert('Please select a valid class.', 'warning');
       return;
     }
 
     try {
-      // Ensure that the selectedClass matches one of the available class IDs
-      const selectedClassDetails = classes.find((classItem) => classItem.id.toString() === selectedClass);
-      
-      if (!selectedClassDetails) {
-        showAlert('Please select a valid class.', 'warning');
-        return;
-      }
-
-      const currentTime = format(new Date(), 'HH:mm');
-      const dayOfWeek = format(new Date(), 'EEEE');
-
-      if (dayOfWeek !== selectedClassDetails.day_of_week || currentTime < selectedClassDetails.start_time || currentTime > selectedClassDetails.end_time) {
-        showAlert(`You can only mark attendance during your class time: ${selectedClassDetails.start_time} - ${selectedClassDetails.end_time} on ${selectedClassDetails.day_of_week}`, 'warning');
-        return;
-      }
-
-      const teacherId = localStorage.getItem('user_id');
-      const today = new Date().toISOString().split('T')[0];
-
-      const response = await fetch(`${apiService.getBaseURL()}/api/attendance/mark`, {
+      const response = await fetch(`${apiService.getBaseURL()}/api/attendance/generate-qrcode`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          class_id: selectedClass,
           teacher_id: teacherId,
-          attendance_date: today,
-          status: status,
-          latitude: geolocation.latitude,
-          longitude: geolocation.longitude,
+          class_id: selectedClass,
         }),
       });
 
       const data = await response.json();
 
-      if (response.ok) {
-        showAlert('Attendance marked successfully! Awaiting supervisor approval.', 'success');
-      } else {
-        showAlert(data.error || 'Failed to mark attendance. Please try again later.', 'error');
+      if (data.qrCodeUrl) {
+        console.log('QR Code Data:', data.qrCodeUrl);
+        setQrImage(data.qrCodeUrl);
+        showAlert('QR Code generated successfully!', 'success');
       }
     } catch (error) {
-      console.error('Error marking attendance:', error);
-      showAlert('Failed to mark attendance. Please try again later.', 'error');
+      console.error('Error generating QR code:', error);
+      showAlert('Failed to generate QR code. Please try again.', 'error');
     }
   };
 
@@ -129,123 +63,134 @@ const TeacherSchedule = () => {
     setTimeout(() => setAlert({ show: false, message: '', type: 'info' }), 6000);
   };
 
-  const cardStyle = {
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-    padding: '20px',
-    marginBottom: '20px',
-  };
-
-  const buttonStyle = {
-    backgroundColor: '#00447B',
-    color: 'white',
-    padding: '10px 15px',
-    borderRadius: '5px',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '16px',
-    width: '100%',
-  };
-
-  const selectStyle = {
-    width: '100%',
-    padding: '10px',
-    marginBottom: '10px',
-    borderRadius: '5px',
-    border: '1px solid #ccc',
-  };
-
-  const tableStyle = {
-    width: '100%',
-    borderCollapse: 'collapse',
-  };
-
-  const thStyle = {
-    backgroundColor: '#00447B',
-    color: 'white',
-    padding: '10px',
-    textAlign: 'left',
-  };
-
-  const tdStyle = {
-    padding: '10px',
-    borderBottom: '1px solid #ddd',
-  };
-
-  const alertStyle = (type) => ({
-    padding: '10px',
-    borderRadius: '5px',
-    marginBottom: '20px',
-    backgroundColor: type === 'error' ? '#f8d7da' : type === 'warning' ? '#fff3cd' : '#d4edda',
-    color: type === 'error' ? '#721c24' : type === 'warning' ? '#856404' : '#155724',
-  });
-
   return (
-    <div style={{ fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-      <h1 style={{ color: '#00447B', fontSize: '32px', marginBottom: '20px' }}>My Class Schedule</h1>
-      
-      <div style={cardStyle}>
-        <h2 style={{ color: '#00447B', fontSize: '24px', marginBottom: '15px' }}>Class Schedule</h2>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Course Code</th>
-              <th style={thStyle}>Course Name</th>
-              <th style={thStyle}>Day</th>
-              <th style={thStyle}>Time</th>
-            </tr>
-          </thead>
-          <tbody>
+    <Container>
+      <Header>
+        <FontAwesomeIcon icon={faChalkboardTeacher} size="2x" color="#00447B" />
+        <Title>My Class Schedule</Title>
+      </Header>
+
+      <Content>
+        <ScheduleSection>
+          <SectionTitle>Class Schedule</SectionTitle>
+          <Select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
+            <option value="">Select Class</option>
             {classes.map((classItem) => (
-              <tr key={classItem.id}>
-                <td style={tdStyle}>{classItem.course_code}</td>
-                <td style={tdStyle}>{classItem.course_name}</td>
-                <td style={tdStyle}>{classItem.day_of_week}</td>
-                <td style={tdStyle}>{`${classItem.start_time} - ${classItem.end_time}`}</td>
-              </tr>
+              <option key={classItem.id} value={classItem.id}>
+                {classItem.course_name} ({classItem.course_code})
+              </option>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </Select>
+          <Button onClick={handleGenerateQRCode}>
+            <FontAwesomeIcon icon={faQrcode} /> Generate QR Code
+          </Button>
+        </ScheduleSection>
 
-      <div style={cardStyle}>
-  <h2 style={{ color: '#00447B', fontSize: '24px', marginBottom: '15px' }}>Mark Attendance</h2>
-  <select 
-    style={selectStyle}
-    value={selectedClass}
-    onChange={(e) => setSelectedClass(e.target.value)}
-  >
-    <option value="">Select Class</option>
-    {classes.map((classItem) => (
-      <option key={classItem.id} value={classItem.id}>
-        {classItem.course_name} ({classItem.course_code})
-      </option>
-    ))}
-  </select>
-  {/* Removed the "Absent" option */}
-  <button style={buttonStyle} onClick={handleMarkAttendance}>
-    Mark Attendance
-  </button>
-</div>
+        {qrImage && (
+          <QRCodeSection>
+            <QRCodeImage src={qrImage} alt="QR Code" />
+            <QRCodeText>Scan the QR code to mark attendance.</QRCodeText>
+          </QRCodeSection>
+        )}
+      </Content>
 
-      {alert.show && (
-        <div style={alertStyle(alert.type)}>
-          {alert.message}
-        </div>
-      )}
-
-      <div style={cardStyle}>
-        <h2 style={{ color: '#00447B', fontSize: '24px', marginBottom: '15px' }}>Information</h2>
-        <ul style={{ listStyleType: 'none', padding: 0 }}>
-          <li style={{ marginBottom: '10px' }}>🌍 You must be on the AUCA Gishushu campus to mark attendance.</li>
-          <li style={{ marginBottom: '10px' }}>📅 Attendance can only be marked on the scheduled day of your class.</li>
-          <li style={{ marginBottom: '10px' }}>⏰ Attendance can only be marked during your scheduled class time.</li>
-          <li style={{ marginBottom: '10px' }}>✅ Marked attendance is subject to supervisor approval.</li>
-        </ul>
-      </div>
-    </div>
+      {alert.show && <Alert type={alert.type}>{alert.message}</Alert>}
+    </Container>
   );
 };
+
+const Container = styled.div`
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Arial', sans-serif;
+`;
+
+const Header = styled.header`
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+`;
+
+const Title = styled.h1`
+  color: #00447B;
+  margin-left: 15px;
+`;
+
+const Content = styled.div`
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+`;
+
+const ScheduleSection = styled.div`
+  margin-bottom: 30px;
+`;
+
+const SectionTitle = styled.h2`
+  color: #00447B;
+  margin-bottom: 15px;
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 16px;
+`;
+
+const Button = styled.button`
+  background-color: #00447B;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+
+  &:hover {
+    background-color: #003366;
+  }
+`;
+
+const QRCodeSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 30px;
+`;
+
+const QRCodeImage = styled.img`
+  width: 200px;
+  height: 200px;
+  border: 2px solid #00447B;
+  border-radius: 8px;
+  margin-bottom: 15px;
+`;
+
+const QRCodeText = styled.p`
+  color: #00447B;
+  font-weight: bold;
+`;
+
+const Alert = styled.div`
+  margin-top: 20px;
+  padding: 10px;
+  border-radius: 4px;
+  font-weight: bold;
+  text-align: center;
+  background-color: ${props => 
+    props.type === 'error' ? '#f8d7da' :
+    props.type === 'success' ? '#d4edda' :
+    props.type === 'warning' ? '#fff3cd' : '#cce5ff'};
+  color: ${props => 
+    props.type === 'error' ? '#721c24' :
+    props.type === 'success' ? '#155724' :
+    props.type === 'warning' ? '#856404' : '#004085'};
+`;
 
 export default TeacherSchedule;
