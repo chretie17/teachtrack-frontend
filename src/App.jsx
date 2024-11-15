@@ -15,6 +15,8 @@ import Report from './components/reports';
 import { CssBaseline } from '@mui/material';
 import Navbar from './components/Navbar'; // Import the Navbar component
 import ErrorBoundary from './components/ErrorBoundary'; // Import ErrorBoundary
+import SubmitAbsence from './components/absence';
+import Allabsence from './components/allabsence';
 
 function Layout() {
   const role = localStorage.getItem('role') || 'teacher'; // Default to 'teacher' if role is not set
@@ -50,6 +52,8 @@ function App() {
           >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/reports" element={<Report />} />
+            <Route path="/absence" element={<SubmitAbsence />} />
+            <Route path="/allabsence" element={<Allabsence />} />
 
             <Route path="/users" element={<Users />} />
             <Route path="/classes-schedule" element={<Classes />} />

@@ -369,27 +369,27 @@ const ReportPage = () => {
               Teacher Performance
             </Typography>
             <StyledTable>
-              <thead>
-                <tr>
-                  <th>Teacher Name</th>
-                  <th>Lesson Name</th>
-                  <th>Class Date</th>
-                  <th>Attendance Status</th>
-                  <th>Recommendation</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teacherPerformanceData.map((row, index) => (
-                  <tr key={index}>
-                    <td>{row.teacher_name}</td>
-                    <td>{row.lesson_name}</td>
-                    <td>{row.class_date}</td>
-                    <td>{row.attendance_status}</td>
-                    <td>{row.recommendation}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </StyledTable>
+  <thead>
+    <tr>
+      <th>Teacher Name</th>
+      <th>Lesson Name</th>
+      <th>Class Date</th>
+      <th>Attendance Status</th>
+      <th>Reason</th>
+    </tr>
+  </thead>
+  <tbody>
+    {teacherPerformanceData.map((row, index) => (
+      <tr key={index}>
+        <td>{row.teacher_name}</td>
+        <td>{row.lesson_name}</td>
+        <td>{row.class_date}</td>
+        <td>{row.attendance_status}</td>
+        <td>{row.attendance_status === 'Absent' ? row.absence_reason || 'Not specified' : '-'}</td>
+      </tr>
+    ))}
+  </tbody>
+</StyledTable>
           </StyledPaper>
         )}
   

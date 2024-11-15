@@ -107,16 +107,22 @@ const Sidebar = ({ role, userName }) => {
       { text: 'Attendances', path: '/approve-attendance', icon: <AssignmentIcon /> },
       { text: 'All Teachers', path: '/manage-teachers', icon: <School /> },
       { text: 'Reports', path: '/reports', icon: <Assessment /> },
+      { text: 'All Absence', path: '/allabsence', icon: <Schedule /> },
+
     ],
     supervisor: [
       { text: 'Dashboard', path: '/dashboard', icon: <Dashboard /> },
       { text: 'All Lectures', path: '/manage-teachers', icon: <School /> },
       { text: 'Attendances', path: '/approve-attendance', icon: <AssignmentIcon /> },
       { text: 'Classes Schedule', path: '/classes-schedule', icon: <Schedule /> },
+      { text: 'All Absence', path: '/allabsence', icon: <Schedule /> },
+
     ],
     teacher: [
       { text: 'Classes Schedule', path: '/teachers-classes-schedule', icon: <Schedule /> },
       { text: 'Attendance History', path: '/attendance-history', icon: <AssignmentIcon /> },
+      { text: 'Absent??', path: '/absence', icon: <AssignmentIcon /> },
+
     ],
   };
 
@@ -126,9 +132,10 @@ const Sidebar = ({ role, userName }) => {
         <img src={logo} alt="Logo" />
       </Logo>
       <Box sx={{ p: 2, textAlign: 'center' }}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1, letterSpacing: 1.5, textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-          {role.toUpperCase()} 
-        </Typography>
+      <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1, letterSpacing: 1.5, textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+  {role === 'admin' ? 'HOD' : role.toUpperCase()}
+</Typography>
+
         <Typography variant="body2" sx={{ mb: 2, opacity: 0.9, fontWeight: 300, letterSpacing: 0.5 }}>
           Welcome, {userName}
         </Typography>
