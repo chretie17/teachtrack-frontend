@@ -17,6 +17,7 @@ import Navbar from './components/Navbar'; // Import the Navbar component
 import ErrorBoundary from './components/ErrorBoundary'; // Import ErrorBoundary
 import SubmitAbsence from './components/absence';
 import Allabsence from './components/allabsence';
+import CreateAnnouncement from './components/announcement';
 
 function Layout() {
   const role = localStorage.getItem('role') || 'teacher'; // Default to 'teacher' if role is not set
@@ -54,7 +55,7 @@ function App() {
             <Route path="/reports" element={<Report />} />
             <Route path="/absence" element={<SubmitAbsence />} />
             <Route path="/allabsence" element={<Allabsence />} />
-
+            <Route path="/announcement" element={<CreateAnnouncement />} />
             <Route path="/users" element={<Users />} />
             <Route path="/classes-schedule" element={<Classes />} />
             <Route path="/teachers-classes-schedule" element={<TeacherSchedule />} />

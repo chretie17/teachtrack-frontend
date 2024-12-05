@@ -19,6 +19,7 @@ import {
   Assessment,
   ExitToApp
 } from '@mui/icons-material';
+import AddAlertIcon from '@mui/icons-material/AddAlert';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import logo from '../assets/logo.png';
 const StyledDrawer = styled(Drawer)(({ theme }) => ({
@@ -116,6 +117,7 @@ const Sidebar = ({ role, userName }) => {
       { text: 'Attendances', path: '/approve-attendance', icon: <AssignmentIcon /> },
       { text: 'Classes Schedule', path: '/classes-schedule', icon: <Schedule /> },
       { text: 'All Absence', path: '/allabsence', icon: <Schedule /> },
+      { text: 'Announcement', path: '/announcement', icon: <AddAlertIcon /> },
 
     ],
     teacher: [
